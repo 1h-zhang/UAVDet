@@ -1,0 +1,53 @@
+backbone:
+
+    # [from, repeats, module, args]
+    - [ -1, 1, Conv, [ 64, 3, 2 ] ]  # 0-P1/2
+    - [ -1, 1, Conv, [ 128, 3, 2 ] ]  # 1-P2/4
+    - [ -1, 3, C2f_ContextGuided, [ 128, True ] ]
+    - [ -1, 1, Conv, [ 256, 3, 2 ] ]  # 3-P3/8
+    - [ -1, 6, C2f_ContextGuided, [ 256, True ] ]
+    - [ -1, 1, Conv, [ 512, 3, 2 ] ]  # 5-P4/16
+    - [ -1, 6, C2f_ContextGuided, [ 512, True ] ]
+    - [ -1, 1, Conv, [ 1024, 3, 2 ] ]  # 7-P5/32
+    - [ -1, 3, C2f_ContextGuided, [ 1024, True ] ]
+    - [ -1, 1, LSKASPM, [ 1024, 5 ] ]  # 9
+
+
+head:
+    - [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ]  # 40
+    - [ [ -1, 6 ], 1, Concat, [ 1 ] ]  # cat backbone
+    - [ -1, 3, C2f_DCGM, [ 512 ] ]  # 12
+
+    - [ -1, 1, nn.Upsample, [ None, 2, 'nearest' ] ]  # 80
+    - [ [ -1, 4 ], 1, Concat, [ 1 ] ]  # cat backbone
+    - [ -1, 3, C2f_DCGM, [ 256 ] ]  # 15
+
+
+    - [ -1, 1, nn.Upsample, [ Non   ] ]  # cat backbone P2
+    - [ -1, 1, Conv, [ 128, 1, 1 ] ]
+
+    - [ 0, 3, C2f_DCGM, [ 64, True ] ]
+    - [ -1, 1, Conv, [ 128, 3, 2 ] ]                  # 320--->160
+    - [ [ -1, 2 ], 1, Concat, [ 1 ] ]  # cat backbone
+    - [ -1, 1, Conv, [ 128, 1, 1 ] ]
+
+    - [ [ 18, -1 ], 1, Concat, [ 1 ] ]  # cat backbone P2
+    - [ -1, 1, C2f_DCGM, [ 128 ] ]   # 24
+
+    - [ -1, 1, Conv, [ 64, 1, 1 ] ]
+    - [ [ -1,-5 ], 1, Concat,[ 1 ] ]
+    - [ -1, 3, C2f_DCGM, [ 128 ] ]  # 27 (P3/8-small)
+
+    - [ -1, 1, Conv, [ 128, 3, 2 ] ]    # 80
+    - [ [ -1, 15 ], 1, Concat, [ 1 ] ]  # cat head P3
+    - [ -1, 3,C2f_DCGM, [ 256 ] ]  # 30 (P4/16-medium)
+
+    - [ -1, 1, Conv, [ 256, 3, 2 ] ]   # 40
+    - [ [ -1, 12 ], 1, Concat, [ 1 ] ]  # cat head P4
+    - [ -1, 3, C2f_DCGM, [ 512 ] ]  # 33 (P4/16-medium)
+
+    - [ -1, 1, Conv, [ 512, 3, 2 ] ]  # 34
+    - [ [ -1, 9 ], 1, Concat, [ 1 ] ]  # cat head P5
+    - [ -1, 3, C2f_DCGM, [ 1024 ] ]  # 36 (P5/32-large)
+
+    - [ [ 27, 30, 33, 36 ], 1, Detect, [ nc ] ]  # Detect()
